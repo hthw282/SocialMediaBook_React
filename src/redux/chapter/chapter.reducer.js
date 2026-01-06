@@ -1,0 +1,252 @@
+import {
+  CHAPTER_UPLOAD_FAILED,
+  CHAPTER_UPLOAD_REQUEST,
+  CHAPTER_UPLOAD_SUCCEED,
+  CLEAR_CHAPTERS,
+  CREATE_PAYMENT_INTENT_FAILED,
+  CREATE_PAYMENT_INTENT_REQUEST,
+  CREATE_PAYMENT_INTENT_SUCCESS,
+  CREATE_PAYMENT_REQUEST,
+  CREATE_PAYMENT_SUCCESS,
+  CREATE_PAYMENT_FAILED,
+  CONFIRM_PAYMENT_REQUEST,
+  CONFIRM_PAYMENT_SUCCESS,
+  CONFIRM_PAYMENT_FAILED,
+  GET_PAYMENT_PROVIDERS_REQUEST,
+  GET_PAYMENT_PROVIDERS_SUCCESS,
+  GET_PAYMENT_PROVIDERS_FAILED,
+  DELETE_CHAPTER_FAILED,
+  DELETE_CHAPTER_REQUEST,
+  DELETE_CHAPTER_SUCCEED,
+  EDIT_CHAPTER_FAILED,
+  EDIT_CHAPTER_REQUEST,
+  EDIT_CHAPTER_SUCCEED,
+  GET_ALL_CHAPTER_FAILED,
+  GET_ALL_CHAPTER_REQUEST,
+  GET_ALL_CHAPTER_SUCCESS,
+  GET_CHAPTER_FAILED,
+  GET_CHAPTER_REQUEST,
+  GET_CHAPTER_SUCCESS,
+  GET_CHAPTERS_BY_BOOK_FAILED,
+  GET_CHAPTERS_BY_BOOK_REQUEST,
+  GET_CHAPTERS_BY_BOOK_SUCCESS,
+  GET_PROGRESS_FAILED,
+  GET_PROGRESS_REQUEST,
+  GET_PROGRESS_SUCCESS,
+  LIKE_CHAPTER_FAILED,
+  LIKE_CHAPTER_REQUEST,
+  LIKE_CHAPTER_SUCCESS,
+  SAVE_PROGRESS_FAILED,
+  SAVE_PROGRESS_REQUEST,
+  SAVE_PROGRESS_SUCCESS,
+  UNLIKE_CHAPTER_FAILED,
+  UNLIKE_CHAPTER_REQUEST,
+  UNLIKE_CHAPTER_SUCCESS,
+  UNLOCK_CHAPTER_FAILED,
+  UNLOCK_CHAPTER_REQUEST,
+  UNLOCK_CHAPTER_SUCCESS,
+} from "./chapter.actionType";
+
+const initialState = {
+  error: null,
+  chapter: null,
+  chapters: [],
+  readingProgress: null,
+  loading: false,
+  unlockSuccess: false,
+  unlockError: null,
+  creditPackages: [],
+  paymentIntent: null,
+  errorPaymentIntent: null,
+  loadingPaymentIntent: false,
+  paymentProviders: [],
+  paymentData: null,
+  loadingPayment: false,
+  confirmingPayment: false,
+};
+
+export const chapterReducer = (state = initialState, action) => {
+  switch (action.type) {
+    case CHAPTER_UPLOAD_REQUEST:
+    case EDIT_CHAPTER_REQUEST:
+    case DELETE_CHAPTER_REQUEST:
+    case GET_CHAPTER_REQUEST:
+    case GET_ALL_CHAPTER_REQUEST:
+    case SAVE_PROGRESS_REQUEST:
+    case GET_PROGRESS_REQUEST:
+    case GET_CHAPTERS_BY_BOOK_REQUEST:
+    case LIKE_CHAPTER_REQUEST:
+    case UNLIKE_CHAPTER_REQUEST:
+      return { ...state, loading: true, error: null };
+    case UNLOCK_CHAPTER_REQUEST:
+      return { ...state, loading: true, unlockError: null, unlockSuccess: false };
+
+    case CREATE_PAYMENT_INTENT_REQUEST:
+      return {
+        ...state,
+        loadingPaymentIntent: true,
+        errorPaymentIntent: null,
+      };
+    case CREATE_PAYMENT_INTENT_SUCCESS:
+      return {
+        ...state,
+        loadingPaymentIntent: false,
+        paymentIntent: action.payload?.clientSecret || action.payload || null,
+      };
+    case CREATE_PAYMENT_INTENT_FAILED:
+      return {
+        ...state,
+        loadingPaymentIntent: false,
+        errorPaymentIntent: action.payload,
+      };
+
+    // New unified payment actions
+    case GET_PAYMENT_PROVIDERS_REQUEST:
+      return {
+        ...state,
+        loading: true,
+        error: null,
+      };
+    case GET_PAYMENT_PROVIDERS_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        paymentProviders: Array.isArray(action.payload) ? action.payload : action.payload?.providers || [],
+      };
+    case GET_PAYMENT_PROVIDERS_FAILED:
+      return {
+        ...state,
+        loading: false,
+        error: action.payload,
+      };
+
+    case CREATE_PAYMENT_REQUEST:
+      return {
+        ...state,
+        loadingPayment: true,
+        error: null,
+      };
+    case CREATE_PAYMENT_SUCCESS:
+      return {
+        ...state,
+        loadingPayment: false,
+        paymentData: action.payload,
+      };
+    case CREATE_PAYMENT_FAILED:
+      return {
+        ...state,
+        loadingPayment: false,
+        error: action.payload,
+      };
+
+    case CONFIRM_PAYMENT_REQUEST:
+      return {
+        ...state,
+        confirmingPayment: true,
+        error: null,
+      };
+    case CONFIRM_PAYMENT_SUCCESS:
+      return {
+        ...state,
+        confirmingPayment: false,
+        paymentData: null,
+      };
+    case CONFIRM_PAYMENT_FAILED:
+      return {
+        ...state,
+        confirmingPayment: false,
+        error: action.payload,
+      };
+    case UNLOCK_CHAPTER_SUCCESS: {
+      const unlockedChapterId = action.meta?.chapterId;
+      return {
+        ...state,
+        loading: false,
+        unlockSuccess: true,
+        chapters: unlockedChapterId
+          ? state.chapters.map((chapter) => (chapter.id === unlockedChapterId ? { ...chapter, unlockedByUser: true } : chapter))
+          : state.chapters,
+        chapter:
+          state.chapter && unlockedChapterId && state.chapter.id === unlockedChapterId
+            ? { ...state.chapter, unlockedByUser: true }
+            : state.chapter,
+      };
+    }
+
+    case GET_CHAPTER_SUCCESS:
+      return { ...state, loading: false, error: null, chapter: action.payload || null };
+    case CHAPTER_UPLOAD_SUCCEED:
+      return {
+        ...state,
+        loading: false,
+        error: null,
+        chapters: action.payload ? [...state.chapters, action.payload] : state.chapters,
+      };
+    case EDIT_CHAPTER_SUCCEED:
+      return {
+        ...state,
+        loading: false,
+        error: null,
+        chapters: action.payload
+          ? state.chapters.map((chapter) => (chapter.id === action.payload.id ? { ...chapter, ...action.payload } : chapter))
+          : state.chapters,
+      };
+    case SAVE_PROGRESS_SUCCESS:
+    case GET_PROGRESS_SUCCESS:
+      return { ...state, loading: false, error: null, readingProgress: action.payload ?? null };
+    case DELETE_CHAPTER_SUCCEED:
+      return {
+        ...state,
+        loading: false,
+        error: null,
+        chapters: state.chapters.filter((chapter) => chapter.id !== action.payload),
+      };
+    case GET_ALL_CHAPTER_SUCCESS:
+    case GET_CHAPTERS_BY_BOOK_SUCCESS:
+      return { ...state, loading: false, error: null, chapters: action.payload || [] };
+    case CLEAR_CHAPTERS:
+      return { ...state, chapters: [] };
+
+    case LIKE_CHAPTER_SUCCESS: {
+      const likedChapter = action.payload;
+      return {
+        ...state,
+        loading: false,
+        chapters: likedChapter
+          ? state.chapters.map((chapter) => (chapter.id === likedChapter.id ? { ...chapter, ...likedChapter } : chapter))
+          : state.chapters,
+        chapter:
+          state.chapter && likedChapter && state.chapter.id === likedChapter.id ? { ...state.chapter, ...likedChapter } : state.chapter,
+      };
+    }
+
+    case UNLIKE_CHAPTER_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        chapters: action.payload
+          ? state.chapters.map((chapter) => (chapter.id === action.payload.id ? { ...chapter, likedByCurrentUser: false } : chapter))
+          : state.chapters,
+        chapter:
+          state.chapter && action.payload && state.chapter.id === action.payload.id
+            ? { ...state.chapter, likedByCurrentUser: false }
+            : state.chapter,
+      };
+    case UNLOCK_CHAPTER_FAILED:
+      return { ...state, loading: false, unlockError: action.payload };
+    case CHAPTER_UPLOAD_FAILED:
+    case EDIT_CHAPTER_FAILED:
+    case DELETE_CHAPTER_FAILED:
+    case GET_CHAPTER_FAILED:
+    case GET_ALL_CHAPTER_FAILED:
+    case SAVE_PROGRESS_FAILED:
+    case GET_PROGRESS_FAILED:
+    case GET_CHAPTERS_BY_BOOK_FAILED:
+    case LIKE_CHAPTER_FAILED:
+    case UNLIKE_CHAPTER_FAILED:
+      return { ...state, loading: false, error: action.payload };
+
+    default:
+      return state;
+  }
+};
